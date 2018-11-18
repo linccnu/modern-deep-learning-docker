@@ -1,0 +1,52 @@
+FROM nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04
+RUN rm -rf /var/lib/apt/lists/* \
+           /etc/apt/sources.list.d/cuda.list \
+           /etc/apt/sources.list.d/nvidia-ml.list
+
+# Supress warnings about missing front-end. As recommended at:
+# http://stackoverflow.com/questions/22466255/is-it-possibe-to-answer-dialog-questions-when-installing-under-docker
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Essentials: developer tools, build tools, OpenBLAS
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-utils git curl vim unzip openssh-client wget \
+    build-essential ca-certificates cmake \
+    libopenblas-dev
+
+#
+# Python 3.5
+#
+# For convenience, alias (but don't sym-link) python & pip to python3 & pip3 as recommended in:
+# http://askubuntu.com/questions/351318/changing-symlink-python-to-python3-causes-problems
+RUN apt-get install -y --no-install-recommends python3.5 python3.5-dev python3-pip python3-tk && \
+    pip3 install --upgrade pip setuptools && \
+    echo "alias python='python3'" >> /root/.bash_aliases && \
+    echo "alias pip='pip3'" >> /root/.bash_aliases
+# Pillow and it's dependencies
+RUN apt-get install -y --no-install-recommends libjpeg-dev zlib1g-dev && \
+    pip3 install Pillow
+
+
+#
+# Jupyter Notebook, setting the Jupyter, but you have to install jupyter with anaconda3-4.2
+#
+# Allow access from outside the container, and skip trying to open a browser.
+# NOTE: disable authentication token for convenience. DON'T DO THIS ON A PUBLIC SERVER.
+RUN mkdir /root/.jupyter && \
+    echo "c.NotebookApp.ip = '*'" \
+         "\nc.NotebookApp.open_browser = False" \
+         "\nc.NotebookApp.token = ''" \
+         "\nc.NotebookApp.port = 8888" \
+         > /root/.jupyter/jupyter_notebook_config.py
+
+#
+# Java
+#
+# Install JDK (Java Development Kit), which includes JRE (Java Runtime
+# Environment). Or, if you just want to run Java apps, you can install
+# JRE only using: apt install default-jre
+RUN apt-get install -y --no-install-recommends default-jdk
+
+
+WORKDIR "/workspace"
+CMD ["/bin/bash"]
